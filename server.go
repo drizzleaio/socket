@@ -41,8 +41,8 @@ func New(port string) *Server {
 	return server
 }
 
-func AddHandler[T any](s *packet.System, id byte, handler func(packet *T)) {
-	s.Handlers[id] = func(data []byte) { // Set the packet decoder for this ID
+func AddHandler[T any](s *Server, id byte, handler func(packet *T)) {
+	s.packetSystem.Handlers[id] = func(data []byte) { // Set the packet decoder for this ID
 		out := new(T)                 // Create a new instance of the output type
 		_ = json.Unmarshal(data, out) // Unmarshal the data into the output type
 		handler(out)

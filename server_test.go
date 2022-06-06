@@ -21,7 +21,7 @@ func TestSocket(t *testing.T) {
 	if server == nil {
 		t.Error("Server is nil")
 	}
-	AddHandler(server.packetSystem, 0, onTestPacket)
+	AddHandler(server, 0, onTestPacket)
 
 	// Connect to a server
 	conn, _ := net.Dial("tcp", "localhost:5000")
