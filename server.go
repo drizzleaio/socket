@@ -49,6 +49,12 @@ func AddHandler[T any](s *packet.System, id byte, handler func(packet *T)) {
 	}
 }
 
+func (s *Server) Emit(p *packet.DataPacket) {
+	for _, c := range s.connections {
+		c.Send(p)
+	}
+}
+
 func (s *Server) packetHandler(msgType byte, data []byte) {
 	handler, ok := s.packetSystem.Handlers[msgType]
 	if !ok {
