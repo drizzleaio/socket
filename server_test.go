@@ -2,6 +2,8 @@ package socket_library
 
 import (
 	"fmt"
+	"github.com/drizzleaio/socket/tcp"
+	"net"
 	"testing"
 )
 
@@ -30,12 +32,18 @@ func onPacket(data *Product) {
 	fmt.Println(data.Name)
 }
 
+//https://monitor.drizzleaio.com/
 func TestSocket(t *testing.T) {
-	client := Connect("localhost", "5000")
+	server := tcp.NewServer("5000", func(conn net.Conn) {
+		fmt.Println("New connection:", conn.RemoteAddr().String())
+	})
+	defer server.Destroy()
+
+	client := tcp.Connect("localhost", "5000")
 	if client == nil {
 		t.Error("Client is nil")
 	}
-	AddClientHandler(client, 1, onPacket)
+	tcp.AddClientHandler(client, 1, onPacket)
 
 	for {
 

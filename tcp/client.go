@@ -1,25 +1,26 @@
-package socket_library
+package tcp
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/drizzleaio/socket/packet"
+	packet2 "github.com/drizzleaio/socket/tcp/packet"
 	"net"
 )
 
 type Client struct {
 	conn         *Connection
-	packetSystem *packet.System
+	packetSystem *packet2.System
 }
 
 func Connect(ip, port string) *Client {
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ip, port))
 	if err != nil {
+		fmt.Println("Failed to connect to server")
 		return nil
 	}
 
 	client := &Client{
-		packetSystem: packet.NewPacketSystem(),
+		packetSystem: packet2.NewPacketSystem(),
 	}
 	stream := NewStream(1024)
 	stream.SetConnection(conn)
@@ -28,7 +29,7 @@ func Connect(ip, port string) *Client {
 	return client
 }
 
-func (c *Client) Send(packet *packet.DataPacket) {
+func (c *Client) Send(packet *packet2.DataPacket) {
 	c.conn.Send(packet)
 }
 

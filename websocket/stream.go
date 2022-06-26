@@ -1,15 +1,16 @@
-package socket_library
+package websocket
 
 import (
-	"encoding/binary"
 	"errors"
-	"github.com/drizzleaio/socket/packet"
-	"net"
+	"fmt"
+	"github.com/drizzleaio/socket/websocket/packet"
+	"github.com/gorilla/websocket"
+	"log"
 	"sync/atomic"
 )
 
 type IOError struct {
-	Connection net.Conn
+	Connection *websocket.Conn
 	Error      error
 }
 
@@ -42,15 +43,15 @@ func NewStream(channelBufferSize int) *Stream {
 	return stream
 }
 
-// Connection returns the internal TCP/UDP connection object.
-func (stream *Stream) Connection() net.Conn {
-	return stream.connection.Load().(net.Conn)
+// Connection returns the internal websocket connection object.
+func (stream *Stream) Connection() *websocket.Conn {
+	return stream.connection.Load().(*websocket.Conn)
 }
 
 // SetConnection sets the connection that the stream uses and
 // it can be called multiple times on a single stream,
 // effectively allowing you to hot-swap connections in failure cases.
-func (stream *Stream) SetConnection(connection net.Conn) {
+func (stream *Stream) SetConnection(connection *websocket.Conn) {
 	if connection == nil {
 		panic(errors.New("SetConnection using nil connection"))
 	}
@@ -78,50 +79,27 @@ func (stream *Stream) Close() {
 
 // read starts a blocking routine that will read incoming messages.
 // This function is meant to be called as a concurrent goroutine.
-func (stream *Stream) read(connection net.Conn) {
+func (stream *Stream) read(connection *websocket.Conn) {
 	defer func() {
 		stream.closeWriter <- struct{}{}
 	}()
 
-	var length int64
-	typeBuffer := make([]byte, 1)
-
 	for {
-		_, err := connection.Read(typeBuffer)
-
+		var p *packet.DataPacket
+		err := connection.ReadJSON(&p)
 		if err != nil {
+			log.Println("read:", err)
 			stream.onError(IOError{connection, err})
-			return
+			break
 		}
 
-		err = binary.Read(connection, binary.BigEndian, &length)
-
-		if err != nil {
-			stream.onError(IOError{connection, err})
-			return
-		}
-
-		data := make([]byte, length)
-		readLength := 0
-		n := 0
-
-		for readLength < len(data) {
-			n, err = connection.Read(data[readLength:])
-			readLength += n
-
-			if err != nil {
-				stream.onError(IOError{connection, err})
-				return
-			}
-		}
-
-		stream.in <- packet.New(typeBuffer[0], data)
+		stream.in <- p
 	}
 }
 
 // write starts a blocking routine that will write outgoing messages.
 // This function is meant to be called as a concurrent goroutine.
-func (stream *Stream) write(connection net.Conn) {
+func (stream *Stream) write(connection *websocket.Conn) {
 	for {
 		select {
 		case <-stream.closeWriter:
@@ -131,6 +109,7 @@ func (stream *Stream) write(connection net.Conn) {
 			err := packet.Write(connection)
 
 			if err != nil {
+				fmt.Println("write:", err)
 				stream.onError(IOError{connection, err})
 				return
 			}

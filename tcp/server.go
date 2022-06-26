@@ -1,26 +1,28 @@
-package socket_library
+package tcp
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/drizzleaio/socket/packet"
+	packet2 "github.com/drizzleaio/socket/tcp/packet"
 	"net"
 )
 
 type Server struct {
 	connections []*Connection
 
-	packetSystem *packet.System
+	listener     net.Listener
+	packetSystem *packet2.System
 }
 
-func NewServer(port string) *Server {
+func NewServer(port string, connectionHandler func(conn net.Conn)) *Server {
 	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return nil
 	}
 
 	server := &Server{
-		packetSystem: packet.NewPacketSystem(),
+		listener:     listener,
+		packetSystem: packet2.NewPacketSystem(),
 	}
 
 	go func() {
@@ -34,11 +36,19 @@ func NewServer(port string) *Server {
 
 			c := NewConnection(*stream, server.packetHandler)
 
+			connectionHandler(conn)
 			server.connections = append(server.connections, c)
 		}
 	}()
 
 	return server
+}
+
+func (s *Server) Destroy() {
+	err := s.listener.Close()
+	if err != nil {
+		return
+	}
 }
 
 func AddServerHandler[T any](s *Server, id byte, handler func(packet *T)) {
@@ -49,7 +59,7 @@ func AddServerHandler[T any](s *Server, id byte, handler func(packet *T)) {
 	}
 }
 
-func (s *Server) Emit(p *packet.DataPacket) {
+func (s *Server) Emit(p *packet2.DataPacket) {
 	for _, c := range s.connections {
 		c.Send(p)
 	}

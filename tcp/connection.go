@@ -1,6 +1,8 @@
-package socket_library
+package tcp
 
-import "github.com/drizzleaio/socket/packet"
+import (
+	"github.com/drizzleaio/socket/tcp/packet"
+)
 
 type Connection struct {
 	stream Stream
