@@ -49,6 +49,12 @@ func (s *Server) Serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) Emit(p *packet.DataPacket) {
+	for _, c := range s.connections {
+		c.Send(p)
+	}
+}
+
 func AddServerHandler[T any](s *Server, id byte, handler func(packet *T)) {
 	s.packetSystem.Handlers[id] = func(data []byte) {
 		out := new(T)
