@@ -13,7 +13,7 @@ type Server struct {
 	packetSystem *packet.System
 }
 
-func New(port string) *Server {
+func NewServer(port string) *Server {
 	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return nil
@@ -41,9 +41,9 @@ func New(port string) *Server {
 	return server
 }
 
-func AddHandler[T any](s *Server, id byte, handler func(packet *T)) {
+func AddServerHandler[T any](s *Server, id byte, handler func(packet *T)) {
 	s.packetSystem.Handlers[id] = func(data []byte) {
-		out := new(T)                
+		out := new(T)
 		_ = json.Unmarshal(data, out)
 		handler(out)
 	}
