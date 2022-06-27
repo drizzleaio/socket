@@ -1,10 +1,12 @@
-package tcp
+package websocket
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/drizzleaio/socket/tcp/packet"
-	"net"
+	"github.com/drizzleaio/socket/websocket/packet"
+	"github.com/gorilla/websocket"
+	"log"
+	"net/url"
 )
 
 type Client struct {
@@ -12,18 +14,18 @@ type Client struct {
 	packetSystem *packet.System
 }
 
-func Connect(ip, port string) *Client {
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ip, port))
-	if err != nil {
-		fmt.Println("Failed to connect to server")
-		return nil
-	}
+func Connect(scheme, host, path string) *Client {
+	u := url.URL{Scheme: scheme, Host: host, Path: path}
 
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
 	client := &Client{
 		packetSystem: packet.NewPacketSystem(),
 	}
 	stream := NewStream(1024)
-	stream.SetConnection(conn)
+	stream.SetConnection(c)
 	client.conn = NewConnection(*stream, client.clientPacketHandler)
 
 	return client
